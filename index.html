@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ruutuaikalaskuri</title>
+<style>
+:root {
+  --bg: #f0f2ff;
+  --surface: rgba(255,255,255,0.8);
+  --surface2: rgba(240,242,255,0.6);
+  --border: rgba(200,205,230,0.5);
+  --text: #1e1e2e;
+  --text-muted: #6b7194;
+  --accent: #6c63ff;
+  --accent-hover: #5a52e0;
+  --accent-glow: rgba(108,99,255,0.3);
+  --positive: #16a34a;
+  --positive-bg: rgba(22, 163, 74, 0.08);
+  --negative: #dc2626;
+  --negative-bg: rgba(220, 38, 38, 0.08);
+  --radius: 16px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; color: var(--text); padding: 24px 16px; line-height: 1.5; min-height: 100vh; background-image: radial-gradient(ellipse at top left, rgba(99,179,237,0.08) 0%, transparent 40%), radial-gradient(ellipse at bottom right, rgba(72,187,120,0.06) 0%, transparent 40%); }
+.container { max-width: 960px; margin: 0 auto; }
+h1 { text-align: center; margin-bottom: 32px; font-size: 1.8rem; font-weight: 700; color: var(--text); animation: fadeDown 0.6s ease; }
+@keyframes fadeDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+@keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+@keyframes pop { 0% { transform: scale(0.9); opacity: 0; } 50% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
+.section { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); animation: fadeIn 0.4s ease both; }
+.section h2 { margin-bottom: 8px; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.week-template { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+.week-template label { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-muted); font-weight: 500; transition: transform 0.2s; }
+.week-template label:hover { transform: translateY(-2px); }
+.week-template input { width: 100%; max-width: 64px; text-align: center; padding: 8px 4px; border: 1px solid #ccd0dc; border-radius: 8px; background: #fff; color: var(--text); font-size: 0.9rem; transition: all 0.2s; }
+.week-template input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.nav { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 20px; }
+.nav button { background: none; color: var(--text); border: none; padding: 8px; cursor: pointer; font-size: 1.2rem; transition: all 0.2s; }
+.nav button:hover { color: var(--accent); transform: scale(1.2); }
+.nav span { font-weight: 600; font-size: 1.05rem; min-width: 160px; text-align: center; }
+.calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.calendar .day-header { text-align: center; font-weight: 600; font-size: 0.75rem; padding: 8px 4px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.calendar .day { border: 1px solid var(--border); border-radius: 12px; padding: 8px; min-height: 100px; font-size: 0.75rem; transition: all 0.25s cubic-bezier(0.4,0,0.2,1); background: rgba(255,255,255,0.9); }
+.calendar .day:hover { border-color: var(--accent); box-shadow: 0 4px 12px rgba(108,99,255,0.1); }
+.calendar .day.today { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); animation: pulse 3s ease infinite; }
+.calendar .day.empty { border: none; background: transparent; }
+.calendar .day.empty:hover { border-color: transparent; transform: none; box-shadow: none; }
+.calendar .day .date { font-weight: 700; margin-bottom: 6px; font-size: 0.85rem; }
+.calendar .day input { width: 100%; padding: 5px 6px; border: 1px solid #ccd0dc; border-radius: 6px; font-size: 0.75rem; margin-bottom: 4px; background: #fff; color: var(--text); transition: all 0.2s; }
+.calendar .day input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+.calendar .day input::placeholder { color: var(--text-muted); opacity: 0.6; }
+.calendar .day .balance { font-weight: 700; font-size: 0.8rem; margin-top: 4px; padding: 2px 6px; border-radius: 4px; display: inline-block; }
+.positive { color: var(--positive); }
+.negative { color: var(--negative); }
+.day.over { background: var(--negative-bg); border-color: rgba(220, 38, 38, 0.25); }
+.day.under { background: var(--positive-bg); border-color: rgba(22, 163, 74, 0.25); }
+.balance-box { font-size: 2.2rem; text-align: center; padding: 8px; font-weight: 800; letter-spacing: -0.02em; transition: all 0.3s; }
+.balance-box.positive { color: var(--positive); text-shadow: 0 0 20px rgba(22,163,74,0.2); }
+.balance-box.negative { color: var(--negative); text-shadow: 0 0 20px rgba(220,38,38,0.2); }
+.extra-section { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.extra-section input, .extra-section select { padding: 10px 12px; border: 1px solid #ccd0dc; border-radius: 8px; background: #fff; color: var(--text); font-size: 0.85rem; transition: all 0.2s; }
+.extra-section input:focus, .extra-section select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.extra-section select { cursor: pointer; padding-right: 32px; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7194' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+.btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 18px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; position: relative; overflow: hidden; }
+.btn:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px var(--accent-glow); }
+.btn:active { transform: translateY(0); }
+.extra-log { margin-top: 16px; }
+.extra-log .extra-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 8px; background: #fff; border: 1px solid var(--border); margin-bottom: 6px; font-size: 0.85rem; animation: fadeIn 0.3s ease; transition: transform 0.2s; }
+.extra-log .extra-item:hover { transform: translateX(4px); }
+.extra-log .extra-item .extra-remove { background: transparent; color: var(--negative); border: 1px solid rgba(248,113,113,0.3); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: all 0.2s; }
+.extra-log .extra-item .extra-remove:hover { background: var(--negative-bg); transform: scale(1.05); }
+.badge { padding: 10px 14px; border-radius: 16px; font-size: 0.8rem; font-weight: 600; border: 1px solid var(--border); background: var(--surface2); color: var(--text-muted); opacity: 0.4; filter: grayscale(1); display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 100px; gap: 2px; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+.badge .badge-desc { font-size: 0.65rem; font-weight: 400; opacity: 0.8; }
+.badge.unlocked { background: linear-gradient(135deg, rgba(108,99,255,0.1), rgba(74,222,128,0.1)); border-color: var(--accent); color: var(--text); opacity: 1; filter: none; animation: pop 0.4s ease; box-shadow: 0 2px 10px rgba(108,99,255,0.15); }
+.badge.unlocked:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 6px 16px rgba(108,99,255,0.2); }
+#todayBanner { animation: fadeIn 0.5s ease; }
+@media (max-width: 640px) {
+  .week-template { grid-template-columns: repeat(4, 1fr); }
+  .calendar { gap: 2px; }
+  .calendar .day { min-height: auto; padding: 4px; font-size: 0.65rem; }
+  .calendar .day .date { font-size: 0.7rem; margin-bottom: 2px; }
+  .calendar .day input { padding: 3px 2px; font-size: 0.65rem; margin-bottom: 2px; }
+  .calendar .day .balance { font-size: 0.6rem; }
+  .calendar .day-header { font-size: 0.65rem; padding: 2px; }
+  .extra-section { flex-direction: column; align-items: stretch; }
+  .balance-box { font-size: 1.6rem; }
+  .nav span { min-width: auto; font-size: 0.9rem; }
+  .calendar .day:hover { transform: none; box-shadow: none; }
+}
+@media (max-width: 380px) {
+  body { padding: 10px 6px; }
+  .section { padding: 12px 8px; }
+  .calendar .day input { padding: 2px 1px; font-size: 0.6rem; }
+  .week-template { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .week-template input { max-width: 50px; padding: 6px 2px; font-size: 0.8rem; }
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="container">
+<h1>📱 Ruutuaikalaskuri</h1>
+
+<div class="section" style="display:flex;align-items:center;justify-content:space-between;padding:14px 24px;flex-wrap:wrap;gap:10px">
+  <div style="display:flex;align-items:center;gap:10px">
+    <label style="font-size:0.85rem;font-weight:600;color:var(--text-muted)">Profiili:</label>
+    <select id="profileSelect" style="padding:8px 32px 8px 12px;border:1px solid #ccd0dc;border-radius:8px;background:#fff;color:var(--text);font-size:0.9rem;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7194' d='M6 8L1 3h10z'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 10px center"></select>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn" onclick="addProfile()" style="padding:8px 12px;font-size:0.8rem">+ Uusi</button>
+    <button class="btn" onclick="renameProfile()" style="padding:8px 12px;font-size:0.8rem;background:none;color:var(--accent);border:1px solid var(--accent)">Nimeä</button>
+    <button class="btn" onclick="deleteProfile()" style="padding:8px 12px;font-size:0.8rem;background:none;color:var(--negative);border:1px solid rgba(220,38,38,0.3)">Poista</button>
+  </div>
+</div>
+
+<div class="section" id="todayBanner" style="padding:14px 24px;font-size:0.95rem;font-weight:600;text-align:center"></div>
+
+<div class="section">
+  <h2>Viikkopohja (min/päivä)</h2>
+  <div class="week-template" id="weekTemplate"></div>
+</div>
+
+<div class="section" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+  <div>
+    <h2 style="margin:0 0 6px 0">Kokonaissaldo</h2>
+    <label style="font-size:0.8rem;color:var(--text-muted);display:flex;align-items:center;gap:6px;white-space:nowrap">Laskenta alkaa: <input type="date" id="balanceStart" style="padding:6px 10px;border:1px solid #ccd0dc;border-radius:6px;background:#fff;color:var(--text);font-size:0.85rem"></label>
+  </div>
+  <div class="balance-box" id="totalBalance" style="padding:0">0 min</div>
+</div>
+
+<div class="section">
+  <h2>Ekstra-aika</h2>
+  <div class="extra-section">
+    <input type="number" id="extraMin" placeholder="Minuutit" style="width:100px">
+    <select id="extraType"><option value="add">+ Lisää aikaa</option><option value="remove">− Ota pois</option></select>
+    <input type="text" id="extraNote" placeholder="Syy (valinnainen)" style="flex:1;min-width:120px">
+    <button class="btn" onclick="addExtra()">Tallenna</button>
+  </div>
+  <div class="extra-log" id="extraLog"></div>
+</div>
+
+<div class="section">
+  <div class="nav">
+    <button onclick="changeMonth(-1)">←</button>
+    <span id="monthLabel"></span>
+    <button onclick="changeMonth(1)">→</button>
+  </div>
+  <div class="calendar" id="calendar"></div>
+</div>
+
+<div class="section">
+  <h2>Saavutukset</h2>
+  <div id="achievements" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+</div>
+
+<div class="section">
+  <h2>Viikkosaldo</h2>
+  <div id="weeklySummary" style="font-size:0.85rem"></div>
+</div>
+
+<div class="section">
+  <h2>Tilastot</h2>
+  <div id="stats" style="font-size:0.85rem"></div>
+</div>
+
+<div class="section">
+  <h2>Tietojen siirto</h2>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <button class="btn" style="background:none;color:var(--accent);border:1px solid var(--accent)" onclick="exportData()">Vie tiedot</button>
+  </div>
+  <div id="dropZone" style="margin-top:12px;border:2px dashed var(--border);border-radius:8px;padding:24px;text-align:center;color:var(--text-muted);font-size:0.85rem;transition:all 0.2s">Raahaa .json-tiedosto tähän tuodaksesi tiedot</div>
+</div>
+</div>
+
+<script>
+const DAYS_FI = ['Ma','Ti','Ke','To','Pe','La','Su'];
+const PROFILES_KEY = 'ruutuaika_profiles';
+const ACTIVE_KEY = 'ruutuaika_active';
+
+let profiles = JSON.parse(localStorage.getItem(PROFILES_KEY) || '{}');
+if (!Object.keys(profiles).length) { profiles['Lapsi 1'] = defaultState(); saveProfiles(); }
+let activeProfile = localStorage.getItem(ACTIVE_KEY) || Object.keys(profiles)[0];
+if (!profiles[activeProfile]) activeProfile = Object.keys(profiles)[0];
+let state = profiles[activeProfile];
+
+let viewYear = new Date().getFullYear();
+let viewMonth = new Date().getMonth();
+let modifiedDates = new Set();
+
+function defaultState() {
+  return { weekTemplate: [60,60,60,60,60,120,120], overrides: {}, actuals: {}, extras: [], balanceStart: '', unlockedBadges: {} };
+}
+
+function saveProfiles() { localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles)); }
+function save() { profiles[activeProfile] = state; saveProfiles(); }
+
+function renderProfiles() {
+  const sel = document.getElementById('profileSelect');
+  sel.innerHTML = Object.keys(profiles).map(name =>
+    `<option value="${name}" ${name === activeProfile ? 'selected' : ''}>${name}</option>`
+  ).join('');
+  sel.onchange = () => { switchProfile(sel.value); };
+}
+
+function switchProfile(name) {
+  activeProfile = name;
+  localStorage.setItem(ACTIVE_KEY, name);
+  state = profiles[name];
+  renderTemplate(); renderCalendar(); renderExtras(); updateBalance();
+}
+
+function addProfile() {
+  const name = prompt('Profiilin nimi:');
+  if (!name || profiles[name]) return;
+  profiles[name] = defaultState();
+  saveProfiles();
+  renderProfiles();
+  switchProfile(name);
+}
+
+function renameProfile() {
+  const name = prompt('Uusi nimi:', activeProfile);
+  if (!name || name === activeProfile || profiles[name]) return;
+  profiles[name] = profiles[activeProfile];
+  delete profiles[activeProfile];
+  activeProfile = name;
+  localStorage.setItem(ACTIVE_KEY, name);
+  saveProfiles();
+  renderProfiles();
+}
+
+function deleteProfile() {
+  if (Object.keys(profiles).length <= 1) { alert('Viimeistä profiilia ei voi poistaa'); return; }
+  if (!confirm(`Poistetaanko profiili "${activeProfile}"?`)) return;
+  delete profiles[activeProfile];
+  saveProfiles();
+  activeProfile = Object.keys(profiles)[0];
+  localStorage.setItem(ACTIVE_KEY, activeProfile);
+  state = profiles[activeProfile];
+  renderProfiles();
+  renderTemplate(); renderCalendar(); renderExtras(); updateBalance();
+}
+
+function renderTemplate() {
+  const el = document.getElementById('weekTemplate');
+  el.innerHTML = DAYS_FI.map((d, i) =>
+    `<label>${d}<input type="number" min="0" value="${state.weekTemplate[i]}" data-i="${i}"></label>`
+  ).join('');
+  el.querySelectorAll('input').forEach(inp => inp.addEventListener('change', e => {
+    if (+e.target.value < 0) e.target.value = '0';
+    state.weekTemplate[+e.target.dataset.i] = +e.target.value || 0;
+    save(); renderCalendar(); updateBalance();
+  }));
+}
+
+function getPlanned(dateStr) {
+  if (state.overrides[dateStr] !== undefined) return state.overrides[dateStr];
+  const d = new Date(dateStr);
+  const dow = (d.getDay() + 6) % 7;
+  return state.weekTemplate[dow];
+}
+
+function changeMonth(delta) {
+  viewMonth += delta;
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const cal = document.getElementById('calendar');
+  const label = document.getElementById('monthLabel');
+  const months = ['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu','Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
+  label.textContent = `${months[viewMonth]} ${viewYear}`;
+
+  let html = DAYS_FI.map(d => `<div class="day-header">${d}</div>`).join('');
+
+  const firstDay = new Date(viewYear, viewMonth, 1);
+  const startDow = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+  for (let i = 0; i < startDow; i++) html += '<div class="day empty"></div>';
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const planned = getPlanned(dateStr);
+    const actual = state.actuals[dateStr] ?? '';
+    const diff = actual !== '' ? planned - actual : null;
+    const cls = diff !== null ? (diff < 0 ? 'over' : 'under') : '';
+    const today = dateStr === new Date().toISOString().slice(0,10) ? ' today' : '';
+    const balText = diff !== null ? `<div class="balance ${diff >= 0 ? 'positive' : 'negative'}">${diff > 0 ? '🌟 +' : diff === 0 ? '⚡ ' : '💥 '}${diff} min</div>` : '';
+
+    html += `<div class="day ${cls}${today}">
+      <div class="date">${d}</div>
+      <input type="number" min="0" placeholder="${planned}" value="${state.overrides[dateStr] !== undefined ? state.overrides[dateStr] : ''}" data-date="${dateStr}" data-field="override" title="Päiväkohtainen pohja (tyhjä = viikkopohja)">
+      <input type="number" min="0" placeholder="toteutunut" value="${actual}" data-date="${dateStr}" data-field="actual" title="Toteutunut ruutuaika">
+      ${balText}
+    </div>`;
+  }
+  cal.innerHTML = html;
+  cal.querySelectorAll('input').forEach(inp => inp.addEventListener('change', e => {
+    const { date, field } = e.target.dataset;
+    modifiedDates.add(date);
+    let val = e.target.value;
+    if (val !== '' && +val < 0) { val = '0'; e.target.value = '0'; }
+    if (field === 'override') {
+      if (val === '') delete state.overrides[date];
+      else state.overrides[date] = +val;
+    } else {
+      if (val === '') delete state.actuals[date];
+      else {
+        state.actuals[date] = +val;
+        if (state.overrides[date] === undefined) state.overrides[date] = getPlanned(date);
+      }
+    }
+    save(); renderCalendar(); updateBalance();
+  }));
+}
+
+function updateBalance() {
+  const startDate = state.balanceStart || '';
+  let total = 0;
+  for (const [dateStr, actual] of Object.entries(state.actuals)) {
+    if (startDate && dateStr < startDate) continue;
+    total += getPlanned(dateStr) - actual;
+  }
+  for (const ex of state.extras) {
+    if (startDate && ex.date < startDate) continue;
+    total += ex.type === 'add' ? ex.min : -ex.min;
+  }
+  const el = document.getElementById('totalBalance');
+  el.textContent = `${total >= 0 ? '+' : ''}${total} min`;
+  el.className = `balance-box ${total >= 0 ? 'positive' : 'negative'}`;
+
+  // Balance start input
+  const startInput = document.getElementById('balanceStart');
+  startInput.value = state.balanceStart || '';
+  startInput.onchange = () => { state.balanceStart = startInput.value; save(); updateBalance(); renderWeeklySummary(); renderStats(); };
+
+  renderTodayBanner();
+  renderWeeklySummary();
+  renderStats();
+}
+
+function renderTodayBanner() {
+  const today = new Date().toISOString().slice(0,10);
+  const planned = getPlanned(today);
+  const actual = state.actuals[today] ?? 0;
+  const remaining = planned - actual;
+  const el = document.getElementById('todayBanner');
+  if (remaining > 0) {
+    el.textContent = `Tänään jäljellä: ${remaining} min`;
+    el.style.color = 'var(--positive)';
+  } else if (remaining < 0) {
+    el.textContent = `Tänään ylitetty: ${Math.abs(remaining)} min`;
+    el.style.color = 'var(--negative)';
+  } else {
+    el.textContent = `Tänään käytetty kaikki aika (${planned} min)`;
+    el.style.color = 'var(--text-muted)';
+  }
+}
+
+function renderWeeklySummary() {
+  const startDate = state.balanceStart || '';
+  const dates = Object.keys(state.actuals).filter(d => !startDate || d >= startDate).sort();
+  if (!dates.length) { document.getElementById('weeklySummary').innerHTML = '<span style="color:var(--text-muted)">Ei vielä dataa</span>'; return; }
+
+  // Group by ISO week
+  const weeks = {};
+  for (const dateStr of dates) {
+    const d = new Date(dateStr);
+    const thu = new Date(d);
+    thu.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+    const yearStart = new Date(thu.getFullYear(), 0, 4);
+    const weekNum = 1 + Math.round(((thu - yearStart) / 86400000 - 3 + ((yearStart.getDay() + 6) % 7)) / 7);
+    const key = `${thu.getFullYear()}-W${String(weekNum).padStart(2,'0')}`;
+    if (!weeks[key]) weeks[key] = 0;
+    weeks[key] += getPlanned(dateStr) - state.actuals[dateStr];
+  }
+
+  const el = document.getElementById('weeklySummary');
+  const allWeeks = Object.entries(weeks);
+  const showAll = el.dataset.expanded === 'true';
+  const visible = showAll ? allWeeks : allWeeks.slice(-4);
+  const toggle = allWeeks.length > 4 ? `<button onclick="this.parentElement.dataset.expanded = this.parentElement.dataset.expanded === 'true' ? '' : 'true'; updateBalance();" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.8rem;padding:8px 0;font-weight:600">${showAll ? 'Näytä vähemmän' : `Näytä kaikki (${allWeeks.length} viikkoa)`}</button>` : '';
+  el.innerHTML = visible.map(([week, bal]) =>
+    `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>${week}</span><span class="${bal >= 0 ? 'positive' : 'negative'}" style="font-weight:600">${bal >= 0 ? '+' : ''}${bal} min</span></div>`
+  ).join('') + toggle;
+}
+
+function renderStats() {
+  const startDate = state.balanceStart || '';
+  const entries = Object.entries(state.actuals).filter(([d]) => !startDate || d >= startDate);
+  if (!entries.length) { document.getElementById('stats').innerHTML = '<span style="color:var(--text-muted)">Ei vielä dataa</span>'; renderAchievements(); return; }
+
+  const actuals = entries.map(([,v]) => v);
+  const avg = Math.round(actuals.reduce((a,b) => a+b, 0) / actuals.length);
+  const diffs = entries.map(([d, v]) => getPlanned(d) - v);
+  const underDays = diffs.filter(d => d > 0).length;
+  const overDays = diffs.filter(d => d < 0).length;
+
+  // Current streak under budget
+  const sorted = entries.map(([d]) => d).sort().reverse();
+  let streak = 0;
+  for (const d of sorted) {
+    if (getPlanned(d) - state.actuals[d] >= 0) streak++;
+    else break;
+  }
+
+  document.getElementById('stats').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>📊 Keskiarvo: <strong>${avg} min/pv</strong></div>
+      <div>🔥 Putki budjetissa: <strong>${streak} pv</strong></div>
+      <div class="positive">✓ Alituksia: <strong>${underDays} pv</strong></div>
+      <div class="negative">✗ Ylityksiä: <strong>${overDays} pv</strong></div>
+    </div>`;
+
+  renderAchievements();
+}
+
+function renderAchievements() {
+  const startDate = state.balanceStart || '';
+  const entries = Object.entries(state.actuals).filter(([d]) => !startDate || d >= startDate);
+  const totalDaysLocal = entries.length;
+  const diffs = entries.map(([d, v]) => getPlanned(d) - v);
+  const underDaysLocal = diffs.filter(d => d > 0).length;
+  const sorted = entries.map(([d]) => d).sort().reverse();
+  let streakLocal = 0;
+  for (const d of sorted) { if (getPlanned(d) - state.actuals[d] >= 0) streakLocal++; else break; }
+  const actuals = entries.map(([,v]) => v);
+  const zeroDays = actuals.filter(v => v === 0).length;
+  const totalBalance = entries.reduce((sum, [d, v]) => sum + (getPlanned(d) - v), 0);
+  const weekends = entries.filter(([d]) => { const dow = (new Date(d).getDay() + 6) % 7; return dow >= 5; });
+  const weekendUnder = weekends.filter(([d, v]) => getPlanned(d) - v > 0).length;
+  const perfectWeeks = (() => {
+    const weeks = {};
+    for (const [d, v] of entries) {
+      const dt = new Date(d);
+      const thu = new Date(dt); thu.setDate(dt.getDate() + 3 - ((dt.getDay() + 6) % 7));
+      const ys = new Date(thu.getFullYear(), 0, 4);
+      const wn = 1 + Math.round(((thu - ys) / 86400000 - 3 + ((ys.getDay() + 6) % 7)) / 7);
+      const key = `${thu.getFullYear()}-W${wn}`;
+      if (!weeks[key]) weeks[key] = { days: 0, under: 0 };
+      weeks[key].days++;
+      if (getPlanned(d) - v >= 0) weeks[key].under++;
+    }
+    return Object.values(weeks).filter(w => w.days >= 5 && w.under === w.days).length;
+  })();
+  const maxSaved = entries.length ? Math.max(...entries.map(([d, v]) => getPlanned(d) - v)) : 0;
+  const sortedDates = entries.map(([d]) => d).sort();
+  let zeroStreak = 0, maxZeroStreak = 0;
+  for (const d of sortedDates) { if (state.actuals[d] === 0) { zeroStreak++; maxZeroStreak = Math.max(maxZeroStreak, zeroStreak); } else zeroStreak = 0; }
+  const exactDays = entries.filter(([d, v]) => getPlanned(d) - v === 0).length;
+  const halfBudgetDays = entries.filter(([d, v]) => v <= getPlanned(d) / 2 && v > 0).length;
+  const mondaysUnder = entries.filter(([d, v]) => (new Date(d).getDay() + 6) % 7 === 0 && getPlanned(d) - v > 0).length;
+  const fridaysUnder = entries.filter(([d, v]) => (new Date(d).getDay() + 6) % 7 === 4 && getPlanned(d) - v > 0).length;
+  const monthsComplete = (() => {
+    const months = {};
+    for (const [d] of entries) { const key = d.slice(0,7); months[key] = (months[key]||0) + 1; }
+    return Object.entries(months).filter(([m, c]) => { const [y,mo] = m.split('-'); return c >= new Date(+y,+mo,0).getDate(); }).length;
+  })();
+  const improving = (() => {
+    if (sortedDates.length < 14) return false;
+    const l14 = sortedDates.slice(-14);
+    return l14.slice(-7).reduce((s,d) => s + state.actuals[d], 0) < l14.slice(0,7).reduce((s,d) => s + state.actuals[d], 0);
+  })();
+  const totalSavedHours = Math.floor(totalBalance / 60);
+
+  const badges = [
+    { emoji: '⭐', name: 'Hyvä alku', desc: '3 pv putki', check: streakLocal >= 3 },
+    { emoji: '🔥', name: 'Viikko!', desc: '7 pv putki', check: streakLocal >= 7 },
+    { emoji: '💪', name: 'Vahva tahto', desc: '14 pv putki', check: streakLocal >= 14 },
+    { emoji: '🏆', name: 'Kuukausi!', desc: '30 pv putki', check: streakLocal >= 30 },
+    { emoji: '💎', name: 'Timanttinen', desc: '60 pv putki', check: streakLocal >= 60 },
+    { emoji: '👑', name: 'Legenda', desc: '100 pv putki', check: streakLocal >= 100 },
+    { emoji: '🌈', name: 'Puoli vuotta', desc: '180 pv putki', check: streakLocal >= 180 },
+    { emoji: '🦄', name: 'Vuosi!', desc: '365 pv putki', check: streakLocal >= 365 },
+    { emoji: '📅', name: 'Aloittelija', desc: '7 pv kirjattu', check: totalDaysLocal >= 7 },
+    { emoji: '📆', name: 'Sitoutunut', desc: '30 pv kirjattu', check: totalDaysLocal >= 30 },
+    { emoji: '🗓️', name: 'Veteraani', desc: '100 pv kirjattu', check: totalDaysLocal >= 100 },
+    { emoji: '📚', name: 'Mestari', desc: '365 pv kirjattu', check: totalDaysLocal >= 365 },
+    { emoji: '🌟', name: '10 alitusta', desc: '10 pv alle budjetin', check: underDaysLocal >= 10 },
+    { emoji: '✨', name: '50 alitusta', desc: '50 pv alle budjetin', check: underDaysLocal >= 50 },
+    { emoji: '🌠', name: '100 alitusta', desc: '100 pv alle budjetin', check: underDaysLocal >= 100 },
+    { emoji: '💫', name: '200 alitusta', desc: '200 pv alle budjetin', check: underDaysLocal >= 200 },
+    { emoji: '🧘', name: 'Digipaussi', desc: '1 pv 0 min', check: zeroDays >= 1 },
+    { emoji: '🏕️', name: 'Irtiotto', desc: '3 pv 0 min yhteensä', check: zeroDays >= 3 },
+    { emoji: '🏔️', name: 'Detox', desc: '7 pv 0 min yhteensä', check: zeroDays >= 7 },
+    { emoji: '🌿', name: 'Luontolapsi', desc: '3 pv 0 min putkeen', check: maxZeroStreak >= 3 },
+    { emoji: '🏝️', name: 'Saari', desc: '7 pv 0 min putkeen', check: maxZeroStreak >= 7 },
+    { emoji: '💰', name: 'Säästäjä', desc: '+60 min saldo', check: totalBalance >= 60 },
+    { emoji: '🏦', name: 'Pankkiiri', desc: '+300 min saldo', check: totalBalance >= 300 },
+    { emoji: '💸', name: 'Miljonääri', desc: '+1000 min saldo', check: totalBalance >= 1000 },
+    { emoji: '🤑', name: 'Aikapankki', desc: '+2000 min saldo', check: totalBalance >= 2000 },
+    { emoji: '⏰', name: 'Tunti talteen', desc: '1h+ säästetty yhteensä', check: totalSavedHours >= 1 },
+    { emoji: '🕐', name: '10 tuntia', desc: '10h+ säästetty yhteensä', check: totalSavedHours >= 10 },
+    { emoji: '🕰️', name: 'Vuorokausi', desc: '24h+ säästetty yhteensä', check: totalSavedHours >= 24 },
+    { emoji: '🎯', name: 'Vkl hallussa', desc: '4 vkl-päivää budjetissa', check: weekendUnder >= 4 },
+    { emoji: '🎪', name: 'Vkl-mestari', desc: '20 vkl-päivää budjetissa', check: weekendUnder >= 20 },
+    { emoji: '🎠', name: 'Vkl-legenda', desc: '50 vkl-päivää budjetissa', check: weekendUnder >= 50 },
+    { emoji: '🎖️', name: 'Täydellinen vko', desc: '1 viikko 100%', check: perfectWeeks >= 1 },
+    { emoji: '🥇', name: '5 täydellistä', desc: '5 viikkoa 100%', check: perfectWeeks >= 5 },
+    { emoji: '🏅', name: '20 täydellistä', desc: '20 viikkoa 100%', check: perfectWeeks >= 20 },
+    { emoji: '🎗️', name: '50 täydellistä', desc: '50 viikkoa 100%', check: perfectWeeks >= 50 },
+    { emoji: '🚀', name: 'Supersäästö', desc: '60+ min säästö päivässä', check: maxSaved >= 60 },
+    { emoji: '🛸', name: 'Megasäästö', desc: '120+ min säästö päivässä', check: maxSaved >= 120 },
+    { emoji: '⚡', name: 'Täsmälleen', desc: '5 pv tasan budjetissa', check: exactDays >= 5 },
+    { emoji: '🎯', name: 'Tarkka-ampuja', desc: '20 pv tasan budjetissa', check: exactDays >= 20 },
+    { emoji: '🌱', name: 'Puolikas', desc: '5 pv alle puolen budjetin', check: halfBudgetDays >= 5 },
+    { emoji: '🌳', name: 'Minimalist', desc: '20 pv alle puolen budjetin', check: halfBudgetDays >= 20 },
+    { emoji: '🍃', name: 'Askeetti', desc: '50 pv alle puolen budjetin', check: halfBudgetDays >= 50 },
+    { emoji: '📖', name: 'Täysi kuukausi', desc: '1 kk kaikki kirjattu', check: monthsComplete >= 1 },
+    { emoji: '📕', name: '3 kuukautta', desc: '3 kk kaikki kirjattu', check: monthsComplete >= 3 },
+    { emoji: '📗', name: 'Puoli vuotta', desc: '6 kk kaikki kirjattu', check: monthsComplete >= 6 },
+    { emoji: '📘', name: 'Koko vuosi', desc: '12 kk kaikki kirjattu', check: monthsComplete >= 12 },
+    { emoji: '📈', name: 'Kehittyjä', desc: 'Viime vko parempi kuin edellinen', check: improving },
+    { emoji: '🌅', name: 'Ma-mestari', desc: '10 maanantaita budjetissa', check: mondaysUnder >= 10 },
+    { emoji: '🎉', name: 'Pe-mestari', desc: '10 perjantaita budjetissa', check: fridaysUnder >= 10 },
+    // Consistency
+    { emoji: '🔗', name: 'Ketju', desc: '7 pv peräkkäin kirjattu', check: (() => { let c=0,m=0; for(const d of sortedDates){const prev=sortedDates[sortedDates.indexOf(d)-1]; if(prev&&(new Date(d)-new Date(prev))===86400000)c++;else c=1; m=Math.max(m,c);} return m>=7; })() },
+    { emoji: '⛓️', name: 'Pitkä ketju', desc: '30 pv peräkkäin kirjattu', check: (() => { let c=0,m=0; for(const d of sortedDates){const prev=sortedDates[sortedDates.indexOf(d)-1]; if(prev&&(new Date(d)-new Date(prev))===86400000)c++;else c=1; m=Math.max(m,c);} return m>=30; })() },
+    // Low usage
+    { emoji: '🐢', name: 'Hidas päivä', desc: '1 pv max 15 min', check: actuals.some(v => v > 0 && v <= 15) },
+    { emoji: '🐌', name: '5 hidasta', desc: '5 pv max 15 min', check: actuals.filter(v => v > 0 && v <= 15).length >= 5 },
+    // High savings
+    { emoji: '🎁', name: 'Lahja itselle', desc: 'Säästä 3h yhteensä', check: totalSavedHours >= 3 },
+    { emoji: '🎄', name: 'Joululahja', desc: 'Säästä 48h yhteensä', check: totalSavedHours >= 48 },
+    // Variety
+    { emoji: '🌊', name: 'Aalto', desc: '3 viikkoa laskeva trendi', check: (() => { if(sortedDates.length<21) return false; const w=[0,1,2].map(i=>sortedDates.slice(i*7,(i+1)*7).reduce((s,d)=>s+state.actuals[d],0)/7); return w[0]>w[1]&&w[1]>w[2]; })() },
+    // Extras
+    { emoji: '🎟️', name: 'Bonuskäyttäjä', desc: 'Ansaitse ekstra-aikaa 3 kertaa', check: (state.extras||[]).filter(e=>e.type==='add').length >= 3 },
+    { emoji: '🎫', name: 'Bonusmestari', desc: 'Ansaitse ekstra-aikaa 10 kertaa', check: (state.extras||[]).filter(e=>e.type==='add').length >= 10 },
+    { emoji: '🌈', name: 'Bonuslegenda', desc: 'Ansaitse ekstra-aikaa 25 kertaa', check: (state.extras||[]).filter(e=>e.type==='add').length >= 25 },
+    { emoji: '🍬', name: 'Pieni bonus', desc: 'Ansaitse 30+ min kerralla', check: (state.extras||[]).some(e=>e.type==='add'&&e.min>=30) },
+    { emoji: '🍰', name: 'Iso bonus', desc: 'Ansaitse 60+ min kerralla', check: (state.extras||[]).some(e=>e.type==='add'&&e.min>=60) },
+    { emoji: '🎂', name: 'Jättipotti', desc: 'Ansaitse 120+ min kerralla', check: (state.extras||[]).some(e=>e.type==='add'&&e.min>=120) },
+    { emoji: '💎', name: 'Bonuspankki', desc: 'Yhteensä 300+ min ansaittua ekstraa', check: (state.extras||[]).filter(e=>e.type==='add').reduce((s,e)=>s+e.min,0) >= 300 },
+    { emoji: '👼', name: 'Reilu pelaaja', desc: 'Luovuta aikaa vapaaehtoisesti 3 kertaa', check: (state.extras||[]).filter(e=>e.type==='remove').length >= 3 },
+    // More extras
+    { emoji: '🏅', name: 'Bonusviikko', desc: 'Ansaitse ekstraa 3 kertaa samalla viikolla', check: (() => { const weeks={}; for(const e of (state.extras||[]).filter(e=>e.type==='add')){const d=new Date(e.date);const thu=new Date(d);thu.setDate(d.getDate()+3-((d.getDay()+6)%7));const k=`${thu.getFullYear()}-${Math.ceil(((thu-new Date(thu.getFullYear(),0,4))/86400000+1)/7)}`;weeks[k]=(weeks[k]||0)+1;} return Object.values(weeks).some(v=>v>=3); })() },
+    { emoji: '💝', name: 'Antelias', desc: 'Luovuta 60+ min kerralla', check: (state.extras||[]).some(e=>e.type==='remove'&&e.min>=60) },
+    { emoji: '🤝', name: 'Tasapeli', desc: 'Yhtä monta bonusta ja vähennystä', check: (() => { const ex=state.extras||[]; const a=ex.filter(e=>e.type==='add').length; const r=ex.filter(e=>e.type==='remove').length; return a>0&&r>0&&a===r; })() },
+    { emoji: '📊', name: 'Bonussaldo+', desc: 'Bonusten nettovaikutus yli +120 min', check: (state.extras||[]).reduce((s,e)=>s+(e.type==='add'?e.min:-e.min),0) >= 120 },
+    { emoji: '🎰', name: 'Jackpot', desc: 'Ansaitse 180+ min kerralla', check: (state.extras||[]).some(e=>e.type==='add'&&e.min>=180) },
+    { emoji: '🧸', name: 'Pikkubonus', desc: '5 kertaa alle 15 min bonus', check: (state.extras||[]).filter(e=>e.type==='add'&&e.min<=15).length >= 5 },
+    { emoji: '🎁', name: 'Lahjaviikko', desc: 'Ansaitse ekstraa joka päivä viikon aikana', check: (() => { const dates=(state.extras||[]).filter(e=>e.type==='add').map(e=>e.date).sort(); for(let i=0;i<=dates.length-7;i++){const week=dates.slice(i,i+7); const unique=new Set(week); if(unique.size>=7){const first=new Date(dates[i]);const last=new Date(dates[i+6]);if((last-first)<=6*86400000)return true;}} return false; })() },
+    { emoji: '🏆', name: 'Bonuskuningas', desc: 'Yhteensä 600+ min ansaittua ekstraa', check: (state.extras||[]).filter(e=>e.type==='add').reduce((s,e)=>s+e.min,0) >= 600 },
+    { emoji: '🎀', name: 'Syyllinen', desc: 'Luovuta aikaa 10 kertaa', check: (state.extras||[]).filter(e=>e.type==='remove').length >= 10 },
+    // Comebacks
+    { emoji: '🔄', name: 'Paluu', desc: 'Budjetissa ylityksen jälkeen', check: (() => { for(let i=1;i<sortedDates.length;i++){if((getPlanned(sortedDates[i-1])-state.actuals[sortedDates[i-1]])<0&&(getPlanned(sortedDates[i])-state.actuals[sortedDates[i]])>0) return true;} return false; })() },
+    { emoji: '💪🔄', name: '5 paluuta', desc: '5 kertaa budjetiin ylityksen jälkeen', check: (() => { let c=0; for(let i=1;i<sortedDates.length;i++){if((getPlanned(sortedDates[i-1])-state.actuals[sortedDates[i-1]])<0&&(getPlanned(sortedDates[i])-state.actuals[sortedDates[i]])>0) c++;} return c>=5; })() },
+    // Seasonal
+    { emoji: '☀️', name: 'Kesälapsi', desc: '14 kesäpäivää (kesä-elo) budjetissa', check: entries.filter(([d,v])=>{const m=+d.slice(5,7); return m>=6&&m<=8&&getPlanned(d)-v>0;}).length >= 14 },
+    { emoji: '❄️', name: 'Talviuni', desc: '14 talvipäivää (joulu-helmi) budjetissa', check: entries.filter(([d,v])=>{const m=+d.slice(5,7); return (m===12||m<=2)&&getPlanned(d)-v>0;}).length >= 14 },
+    // Milestones
+    { emoji: '🎂', name: '1 kk käytössä', desc: 'Ensimmäisestä kirjauksesta 30 pv', check: sortedDates.length>1&&(new Date(sortedDates[sortedDates.length-1])-new Date(sortedDates[0]))>=30*86400000 },
+    { emoji: '🎊', name: '6 kk käytössä', desc: 'Ensimmäisestä kirjauksesta 180 pv', check: sortedDates.length>1&&(new Date(sortedDates[sortedDates.length-1])-new Date(sortedDates[0]))>=180*86400000 },
+    { emoji: '🥳', name: '1 vuosi käytössä', desc: 'Ensimmäisestä kirjauksesta 365 pv', check: sortedDates.length>1&&(new Date(sortedDates[sortedDates.length-1])-new Date(sortedDates[0]))>=365*86400000 },
+    // Discipline
+    { emoji: '🧱', name: 'Perusta', desc: '5 pv peräkkäin alle budjetin', check: (() => { let c=0; for(const d of sortedDates){if(getPlanned(d)-state.actuals[d]>0)c++;else c=0; if(c>=5)return true;} return false; })() },
+    { emoji: '🏰', name: 'Linnoitus', desc: '21 pv peräkkäin alle budjetin', check: (() => { let c=0; for(const d of sortedDates){if(getPlanned(d)-state.actuals[d]>0)c++;else c=0; if(c>=21)return true;} return false; })() },
+    // Variety in savings
+    { emoji: '🎲', name: 'Vaihteleva', desc: '7 eri säästömäärää viikossa', check: (() => { for(let i=0;i<=sortedDates.length-7;i++){const s=new Set(sortedDates.slice(i,i+7).map(d=>getPlanned(d)-state.actuals[d])); if(s.size>=7)return true;} return false; })() },
+    // Specific amounts
+    { emoji: '🎯', name: 'Nollalinja', desc: '10 pv tasan 0 min käytetty', check: actuals.filter(v=>v===0).length >= 10 },
+    { emoji: '⏱️', name: 'Puolituntinen', desc: '10 pv tasan 30 min käytetty', check: actuals.filter(v=>v===30).length >= 10 },
+    { emoji: '⌛', name: 'Tuntimies', desc: '10 pv tasan 60 min käytetty', check: actuals.filter(v=>v===60).length >= 10 },
+    // Weekday mastery
+    { emoji: '📅', name: 'Arkimestari', desc: '20 arkipäivää (ma-pe) budjetissa', check: entries.filter(([d,v])=>(new Date(d).getDay()+6)%7<5&&getPlanned(d)-v>0).length >= 20 },
+    { emoji: '🗂️', name: 'Arkirautainen', desc: '50 arkipäivää budjetissa', check: entries.filter(([d,v])=>(new Date(d).getDay()+6)%7<5&&getPlanned(d)-v>0).length >= 50 },
+    // Never over
+    { emoji: '🛡️', name: 'Suojakilpi', desc: '14 pv ilman ylitystä', check: (() => { let c=0; for(const d of sortedDates){if(getPlanned(d)-state.actuals[d]>=0)c++;else c=0; if(c>=14)return true;} return false; })() },
+    { emoji: '🏯', name: 'Koskematon', desc: '30 pv ilman ylitystä', check: (() => { let c=0; for(const d of sortedDates){if(getPlanned(d)-state.actuals[d]>=0)c++;else c=0; if(c>=30)return true;} return false; })() },
+    // Recovery
+    { emoji: '🌅', name: 'Uusi alku', desc: 'Negatiivinen saldo → positiivinen', check: (() => { let bal=0; let wasNeg=false; for(const d of sortedDates){bal+=getPlanned(d)-state.actuals[d]; if(bal<0)wasNeg=true; if(wasNeg&&bal>0)return true;} return false; })() },
+    // Speed achievements
+    { emoji: '⚡', name: 'Pikakäynnistys', desc: '3 pv budjetissa ensimmäisellä viikolla', check: sortedDates.slice(0,7).filter(d=>getPlanned(d)-state.actuals[d]>0).length >= 3 },
+    // Monthly
+    { emoji: '🌙', name: 'Kuukauden kuningas', desc: 'Koko kuukausi budjetissa', check: (() => { const months={}; for(const [d,v] of entries){const k=d.slice(0,7); if(!months[k])months[k]={t:0,u:0}; months[k].t++; if(getPlanned(d)-v>=0)months[k].u++;} return Object.values(months).some(m=>m.t>=28&&m.u===m.t); })() },
+    // Social
+    { emoji: '📤', name: 'Jakaja', desc: 'Vie tiedot kerran', check: !!state.exported },
+    // Decreasing trend
+    { emoji: '📉', name: 'Laskusuunta', desc: 'Keskiarvo laskenut 4 viikkoa', check: (() => { if(sortedDates.length<28) return false; const w=[0,1,2,3].map(i=>sortedDates.slice(-(4-i)*7,sortedDates.length-(3-i)*7||undefined).reduce((s,d)=>s+state.actuals[d],0)); return w[0]>w[1]&&w[1]>w[2]&&w[2]>w[3]; })() },
+  ];
+  // Badges persist unless you edit a date that contributed to unlocking them
+  if (!state.unlockedBadges || Array.isArray(state.unlockedBadges)) state.unlockedBadges = {};
+  let changed = false;
+  const currentDates = new Set(entries.map(([d]) => d));
+  badges.forEach(b => {
+    if (b.check && !state.unlockedBadges[b.name]) {
+      // Store which dates existed when badge was earned
+      state.unlockedBadges[b.name] = [...currentDates];
+      changed = true;
+    }
+    if (!b.check && state.unlockedBadges[b.name]) {
+      // Revoke only if a contributing date was modified
+      const contributingDates = state.unlockedBadges[b.name];
+      if (Array.isArray(contributingDates) && contributingDates.some(d => modifiedDates.has(d))) {
+        delete state.unlockedBadges[b.name];
+        changed = true;
+      }
+    }
+  });
+  if (changed) save();
+  const isUnlocked = b => b.check || !!state.unlockedBadges[b.name];
+  const unlockedCount = badges.filter(isUnlocked).length;
+  document.getElementById('achievements').innerHTML =
+    `<div style="width:100%;font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">${unlockedCount}/${badges.length} avattu</div>` +
+    badges.map(b =>
+      `<div class="badge ${isUnlocked(b) ? 'unlocked' : ''}">${b.emoji} ${b.name}<span class="badge-desc">${b.desc}</span></div>`
+    ).join('');
+}
+
+function addExtra() {
+  const min = Math.max(0, +document.getElementById('extraMin').value);
+  if (!min) return;
+  const type = document.getElementById('extraType').value;
+  const note = document.getElementById('extraNote').value;
+  state.extras.push({ min, type, note, date: new Date().toISOString().slice(0,10) });
+  save();
+  document.getElementById('extraMin').value = '';
+  document.getElementById('extraNote').value = '';
+  renderExtras(); updateBalance();
+}
+
+function removeExtra(i) {
+  state.extras.splice(i, 1);
+  save(); renderExtras(); updateBalance();
+}
+
+function renderExtras() {
+  const el = document.getElementById('extraLog');
+  const extras = state.extras || [];
+  if (!extras.length) { el.innerHTML = ''; return; }
+  const showAll = el.dataset.expanded === 'true';
+  const reversed = [...extras].map((ex, i) => ({ ...ex, idx: i })).reverse();
+  const visible = showAll ? reversed : reversed.slice(0, 3);
+  const toggle = extras.length > 3 ? `<button onclick="this.parentElement.dataset.expanded = this.parentElement.dataset.expanded === 'true' ? '' : 'true'; renderExtras();" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.8rem;padding:8px 0;font-weight:600">${showAll ? 'Näytä vähemmän' : `Näytä kaikki (${extras.length})`}</button>` : '';
+  el.innerHTML = visible.map(ex =>
+    `<div class="extra-item" style="background:${ex.type === 'add' ? 'rgba(22,163,74,0.06)' : 'rgba(220,38,38,0.06)'}"><span>${ex.date}: ${ex.type === 'add' ? '+' : '−'}${ex.min} min${ex.note ? ' — ' + ex.note : ''}</span><button class="extra-remove" onclick="removeExtra(${ex.idx})">Poista</button></div>`
+  ).join('') + toggle;
+}
+
+// Migrate old single-profile data
+(function migrate() {
+  const old = localStorage.getItem('ruutuaika_data');
+  if (old) {
+    try {
+      const data = JSON.parse(old);
+      if (!profiles['Lapsi 1'] || !Object.keys(profiles['Lapsi 1'].actuals).length) {
+        profiles['Lapsi 1'] = { ...defaultState(), ...data };
+        saveProfiles();
+        state = profiles[activeProfile];
+      }
+    } catch {}
+    localStorage.removeItem('ruutuaika_data');
+  }
+})();
+
+renderProfiles();
+renderTemplate();
+renderCalendar();
+renderExtras();
+updateBalance();
+
+function exportData() {
+  state.exported = true; save();
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ruutuaika_' + activeProfile + '_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent)'; dropZone.style.background = 'rgba(108,99,255,0.05)'; });
+dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = 'var(--border)'; dropZone.style.background = ''; });
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.style.borderColor = 'var(--border)';
+  dropZone.style.background = '';
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.name.endsWith('.json')) { alert('Valitse .json-tiedosto'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      state = { ...defaultState(), ...imported };
+      profiles[activeProfile] = state;
+      save();
+      renderTemplate(); renderCalendar(); renderExtras(); updateBalance();
+      dropZone.textContent = '✓ Tiedot tuotu!';
+      setTimeout(() => { dropZone.textContent = 'Raahaa .json-tiedosto tähän tuodaksesi tiedot'; }, 2000);
+    } catch { alert('Virheellinen tiedosto'); }
+  };
+  reader.readAsText(file);
+});
+</script>
+</body>
+</html>
